@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset='utf-8'>
+    <meta http-equiv='X-UA-Compatible' content='IE=edge'>
+    <title>Ejemplo tensorflow javascript - Supermercado</title>
+    <meta name='viewport' content='width=device-width, initial-scale=1'>
+    <script src='https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@1.0.0/dist/tf.min.js'></script>
+    <script>
+        const list_size_formats = ['kg', 'l', 'm', 'ud'];
+        const list_packagings = ['1/2 pieza', 'bandeja', 'barra', 'benjamín', 'bol', 'bolsa',
+            'bote', 'botella', 'botellín', 'brick', 'caja', 'cubo', 'frasco',
+            'garrafa', 'granel', 'lata', 'malla', 'manojo', 'otro', 'pack-10',
+            'pack-12', 'pack-16', 'pack-2', 'pack-24', 'pack-3', 'pack-4',
+            'pack-6', 'pack-8', 'pack-9', 'paquete', 'pastilla', 'pieza',
+            'rollo', 'saco', 'sobre', 'spray', 'tableta', 'tarrina', 'tarrito',
+            'tarro', 'tubo', 'vaso'];
+
+        let words = [];
+
+        async function loadWords() {
+            words = await fetch('./model/words.js').then(async function (res){
+                const v = eval(await res.text());
+                const ret = {};
+                for(let i=0; i<v.length; i++) {
+                    ret[v[i]] = i;
+                }
+                return ret;
+            });
+        }
+
+        async function initialize_product(product_name, size, current_size_format, isWater, requires_age_check, current_packaging) {
+
+            let row = new Array(Object.keys(words).length).fill(0.0);
+
+            product_name = product_name.toLowerCase();
+
+            const productNameWords = product_name.split(' ');
+            for(let one of productNameWords) {
+                if(words[one] !== undefined) {
+                    row[words[one]] = 1.0;
+                }
+            }
+
+            row.splice(0, 0, isWater);
+            row.splice(1, 0, requires_age_check);
+            row.splice(2, 0, size);
+
+            let j = 3;
+            for (i of list_size_formats) {
+                var val = (current_size_format == i)*1.0;
+                row.splice(j, 0, val);
+                j++;
+            }
+
+            j = 7;
+            for (i of list_packagings) {
+                var val = (current_packaging == i)*1.0;
+                row.splice(j, 0, val);
+                j++;
+            }
+
+            return row;
+        }
+
+        async function predecir(product_name, size, current_size_format, isWater, requires_age_check, current_packaging) {
+            const url = './model/model.json';
+            const model = await tf.loadLayersModel(url);
+
+            console.log(model.summary());
+
+            let row = await initialize_product(product_name, size, current_size_format, isWater, requires_age_check, current_packaging);
+
+            const inputTensorX = tf.tensor1d(row).expandDims();
+            const predictionX = model.predict(inputTensorX);
+            
+            alert(`Predicción precio para ${product_name}, ${size} ${current_size_format}, presentado en ${current_packaging}: ${predictionX}`);
+        }
+    </script>
+</head>
+<body onload="return loadWords();">
+    <p><a href='#' onclick="predecir('hummus chocolate', 0.24, 'kg', 0, 0, 'tarrina'); return false;">Predecir hummus de chocolate</a></p>
+    <p><a href='#' onclick="predecir('hummus chocolate hacendado', 0.24, 'kg', 0, 0, 'tarrina'); return false;">Predecir hummus de chocolate hacendado</a></p>
+    <p><a href='#' onclick="predecir('hummus chocolate nestlé', 0.24, 'kg', 0, 0, 'tarrina'); return false;">Predecir hummus de chocolate nesté</a></p>
+</body>
+</html>
