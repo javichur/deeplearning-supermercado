@@ -1,86 +1,192 @@
 <!DOCTYPE html>
 <html>
+
 <head>
-    <meta charset='utf-8'>
-    <meta http-equiv='X-UA-Compatible' content='IE=edge'>
-    <title>Ejemplo tensorflow javascript - Supermercado</title>
-    <meta name='viewport' content='width=device-width, initial-scale=1'>
-    <script src='https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@1.0.0/dist/tf.min.js'></script>
-    <script>
-        const list_size_formats = ['kg', 'l', 'm', 'ud'];
-        const list_packagings = ['1/2 pieza', 'bandeja', 'barra', 'benjamín', 'bol', 'bolsa',
-            'bote', 'botella', 'botellín', 'brick', 'caja', 'cubo', 'frasco',
-            'garrafa', 'granel', 'lata', 'malla', 'manojo', 'otro', 'pack-10',
-            'pack-12', 'pack-16', 'pack-2', 'pack-24', 'pack-3', 'pack-4',
-            'pack-6', 'pack-8', 'pack-9', 'paquete', 'pastilla', 'pieza',
-            'rollo', 'saco', 'sobre', 'spray', 'tableta', 'tarrina', 'tarrito',
-            'tarro', 'tubo', 'vaso'];
+  <meta charset='utf-8'>
+  <meta http-equiv='X-UA-Compatible' content='IE=edge'>
+  <title>Deeplearning para predecir precios de supermercado</title>
+  <meta name='viewport' content='width=device-width, initial-scale=1'>
+  <script src='https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@1.0.0/dist/tf.min.js'></script>
+  <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.4.1/css/bootstrap.min.css"
+    integrity="sha384-Vkoo8x4CGsO3+Hhxv8T/Q5PaXtkKtu6ug5TOeNV6gBiFeWPGFN9MuhOf23Q9Ifjh" crossorigin="anonymous">
+  <link rel="stylesheet" href="style.css">
+  <script>
+    const list_size_formats = ['kg', 'l', 'm', 'ud'];
+    const list_packagings = ['1/2 pieza', 'bandeja', 'barra', 'benjamín', 'bol', 'bolsa',
+      'bote', 'botella', 'botellín', 'brick', 'caja', 'cubo', 'frasco',
+      'garrafa', 'granel', 'lata', 'malla', 'manojo', 'otro', 'pack-10',
+      'pack-12', 'pack-16', 'pack-2', 'pack-24', 'pack-3', 'pack-4',
+      'pack-6', 'pack-8', 'pack-9', 'paquete', 'pastilla', 'pieza',
+      'rollo', 'saco', 'sobre', 'spray', 'tableta', 'tarrina', 'tarrito',
+      'tarro', 'tubo', 'vaso'];
 
-        let words = [];
+    let words = [];
+    let model = null;
 
-        async function loadWords() {
-            words = await fetch('./model/words.js').then(async function (res){
-                const v = eval(await res.text());
-                const ret = {};
-                for(let i=0; i<v.length; i++) {
-                    ret[v[i]] = i;
-                }
-                return ret;
-            });
+    /* Carga las palabras y los selectores del formulario. */
+    async function loadInfo() {
+      // Cargar palabras
+      words = await fetch('./model/words.js').then(async function (res) {
+        const v = eval(await res.text());
+        const ret = {};
+        for (let i = 0; i < v.length; i++) {
+          ret[v[i]] = i;
         }
+        return ret;
+      });
 
-        async function initialize_product(product_name, size, current_size_format, isWater, requires_age_check, current_packaging) {
+      // rellenar desplegables
+      const opSizeFormat = document.getElementById("opSizeFormat");
+      for (let i = 0; i < list_size_formats.length; i++) {
+        var opt = document.createElement("option");
+        opt.value = list_size_formats[i];
+        opt.text = list_size_formats[i];
 
-            let row = new Array(Object.keys(words).length).fill(0.0);
+        opSizeFormat.add(opt);
+      }
 
-            product_name = product_name.toLowerCase();
+      const opPackaging = document.getElementById("opPackaging");
+      for (let i = 0; i < list_packagings.length; i++) {
+        var opt = document.createElement("option");
+        opt.value = list_packagings[i];
+        opt.text = list_packagings[i];
 
-            const productNameWords = product_name.split(' ');
-            for(let one of productNameWords) {
-                if(words[one] !== undefined) {
-                    row[words[one]] = 1.0;
-                }
-            }
+        opPackaging.add(opt);
+      }
 
-            row.splice(0, 0, isWater);
-            row.splice(1, 0, requires_age_check);
-            row.splice(2, 0, size);
+      document.getElementById("loading").style.display = "none";
+    }
 
-            let j = 3;
-            for (i of list_size_formats) {
-                var val = (current_size_format == i)*1.0;
-                row.splice(j, 0, val);
-                j++;
-            }
+    /* Inicializa el array del producto con sus características y one-hot encoding 
+    de las palabras del nombre, size_format y packaging. */
+    async function initialize_product(product_name, size, current_size_format, isWater, requires_age_check, current_packaging) {
 
-            j = 7;
-            for (i of list_packagings) {
-                var val = (current_packaging == i)*1.0;
-                row.splice(j, 0, val);
-                j++;
-            }
+      let row = new Array(Object.keys(words).length).fill(0.0);
 
-            return row;
+      product_name = product_name.toLowerCase();
+
+      const productNameWords = product_name.split(' ');
+      for (let one of productNameWords) {
+        if (words[one] !== undefined) {
+          row[words[one]] = 1.0;
         }
+      }
 
-        async function predecir(product_name, size, current_size_format, isWater, requires_age_check, current_packaging) {
-            const url = './model/model.json';
-            const model = await tf.loadLayersModel(url);
+      row.splice(0, 0, isWater);
+      row.splice(1, 0, requires_age_check);
+      row.splice(2, 0, size);
 
-            console.log(model.summary());
+      let j = 3;
+      for (i of list_size_formats) {
+        var val = (current_size_format == i) * 1.0;
+        row.splice(j, 0, val);
+        j++;
+      }
 
-            let row = await initialize_product(product_name, size, current_size_format, isWater, requires_age_check, current_packaging);
+      for (i of list_packagings) {
+        var val = (current_packaging == i) * 1.0;
+        row.splice(j, 0, val);
+        j++;
+      }
 
-            const inputTensorX = tf.tensor1d(row).expandDims();
-            const predictionX = model.predict(inputTensorX);
-            
-            alert(`Predicción precio para ${product_name}, ${size} ${current_size_format}, presentado en ${current_packaging}: ${predictionX}`);
-        }
-    </script>
+      return row;
+    }
+
+    /* Infiere el precio del producto con el modelo de red neuronal previamente entrenado. */
+    async function predict(product_name, size, current_size_format, isWater, requires_age_check, current_packaging) {
+      document.getElementById("loading").style.display = "inline";
+
+      if (!model) { // cargar el modelo solo la primera vez
+        model = await tf.loadLayersModel('./model/model.json');
+        console.log(model.summary());
+      }
+
+      let row = await initialize_product(product_name, size, current_size_format, isWater, requires_age_check, current_packaging);
+
+      const inputTensorX = tf.tensor1d(row).expandDims();
+      const predictionX = model.predict(inputTensorX);
+
+      document.getElementById("loading").style.display = "none";
+
+      alert(`Predicción precio para ${product_name}, ${size} ${current_size_format}, presentado en ${current_packaging}: ${predictionX.asScalar()} €`);
+    }
+
+    async function predictFromForm() {
+      await predict(document.getElementById('txtProductName').value,
+        parseFloat(document.getElementById('txtSize').value),
+        document.getElementById('opSizeFormat').value,
+        (document.getElementById('cbIsWater').checked) ? 1 : 0,
+        (document.getElementById('cbRequiresAgeCheck').checked) ? 1 : 0,
+        document.getElementById('opPackaging').value);
+    }
+  </script>
 </head>
-<body onload="return loadWords();">
-    <p><a href='#' onclick="predecir('hummus chocolate', 0.24, 'kg', 0, 0, 'tarrina'); return false;">Predecir hummus de chocolate</a></p>
-    <p><a href='#' onclick="predecir('hummus chocolate hacendado', 0.24, 'kg', 0, 0, 'tarrina'); return false;">Predecir hummus de chocolate hacendado</a></p>
-    <p><a href='#' onclick="predecir('hummus chocolate nestlé', 0.24, 'kg', 0, 0, 'tarrina'); return false;">Predecir hummus de chocolate nesté</a></p>
+
+<body onload="return loadInfo();">
+  <div id="loading" class="loading">
+    <div class="spinner-border text-success" role="status">
+      <span class="sr-only">Loading...</span>
+    </div>
+  </div>
+  <div class="container" style="padding-bottom: 100px;">
+    <div class="page-header">
+      <h1>Deeplearning para predecir precios de supermercado</h1>
+    </div>
+    
+    <p>Ejemplos: hummus de... <a href="#" onclick="predict('hummus de chocolate', 0.24, 'kg', 0, 0, 'tarrina'); return false;">chocolate</a> | 
+      <a href="#" onclick="predict('hummus de chocolate hacendado', 0.24, 'kg', 0, 0, 'tarrina'); return false;">chocolate hacendado</a> | 
+      <a href="#" onclick="predict('hummus dechocolate nestlé', 0.24, 'kg', 0, 0, 'tarrina'); return false;">chocolate nestlé</a>
+    </p>
+
+    <form onsubmit="predictFromForm(); return false;">
+      <div class="form-group">
+        <label for="txtProductName">Nombre del producto (puede ser inventado)</label>
+        <input type="text" class="form-control" id="txtProductName" name="txtProductName" required>
+        <!--<small id="productNameHelp" class="form-text text-muted">Ejemplos: hummus de chocolate, hummus de chololate
+          hacendado, hummus de chocolate nestlé</small> -->
+      </div>
+      <div class="form-group">
+        <label for="txtSize">Tamaño</label>
+        <input type="number" class="form-control" id="txtSize" required step="0.01" min="0"
+          max="800">
+        <small id="sizeHelp" class="form-text text-muted">Ejemplos: 0.24, 0.4, 1...</small>
+      </div>
+      <div class="form-group">
+        <label for="opSizeFormat">Unidad de medida</label>
+        <select id="opSizeFormat" class="form-control" required>
+          <option selected disabled value="">Elige...</option>
+        </select>
+        <small id="sizeFormatHelp" class="form-text text-muted">Ejemplo: 'kg' (para el hummus)</small>
+      </div>
+      <div class="form-group">
+        <label for="opPackaging">Tipo de envase</label>
+        <select id="opPackaging" class="form-control" required>
+          <option selected disabled value="">Elige...</option>
+        </select>
+        <small id="packagingHelp" class="form-text text-muted">Ejemplo: 'tarrina' (para el hummus)</small>
+      </div>
+      <div class="form-group form-check-inline">
+        <input type="checkbox" class="form-check-input" id="cbIsWater">
+        <label class="form-check-label" for="cbIsWater">¿Es agua?</label>
+      </div>
+      <div class="form-group form-check-inline">
+        <input type="checkbox" class="form-check-input" id="cbRequiresAgeCheck">
+        <label class="form-check-label" for="cbRequiresAgeCheck">¿Es solo para +18 años?</label>
+      </div>
+      <button type="submit" class="btn btn-success btn-block">Predecir precio</button>
+      <p><small id="disclaimer" class="form-text text-muted">Disclaimer: Esto es una prueba de 
+        concepto usando TensorFlow y TensorFlow.js para predecir precios de productos de 
+        supermercado a partir de algunas de sus características. Más información sobre el 
+        proceso y trabajo futuro <a href="https://javiercampos.es/blog/2020/04/22/deep-learning-para-predecir-el-precio-del-hummus-de-chocolate/" target="_blank">aquí</a>.</small>
+      </p>
+    </form>
+  </div>
+  <footer id="footer" class="py-2 bg-dark text-white-50">
+    <div class="container text-center">
+      <small><a href="https://javiercampos.es/blog/2020/04/22/deep-learning-para-predecir-el-precio-del-hummus-de-chocolate/" target="_blank">About</a> | 
+        <a href="https://github.com/javichur/deeplearning-supermercado" target="_blank">Github</a></small>
+    </div>
+  </footer>
 </body>
+
 </html>
