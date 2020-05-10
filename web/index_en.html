@@ -4,7 +4,7 @@
 <head>
   <meta charset='utf-8'>
   <meta http-equiv='X-UA-Compatible' content='IE=edge'>
-  <title>Deeplearning para predecir precios de supermercado</title>
+  <title>Deeplearning to predict supermarket prices</title>
   <meta name='viewport' content='width=device-width, initial-scale=1'>
   <script src='https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@1.0.0/dist/tf.min.js'></script>
   <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.4.1/css/bootstrap.min.css"
@@ -21,12 +21,12 @@
   </div>
   <div class="container" style="padding-bottom: 100px;">
     <div class="page-header">
-      <h1>Deeplearning para predecir precios de supermercado</h1>
+      <h1>Deeplearning to predict supermarket prices</h1>
     </div>
 
-    <a class="btn btn-success btn-sm" style="color: white;" href="index_en.html" role="button">Change to English</a>
+    <a class="btn btn-success btn-sm" style="color: white;" href="index.html" role="button">Cambiar a Castellano</a>
 
-    <p>Ejemplos: hummus de... <a href="#"
+    <p>Samples (in Spanish): hummus de... <a href="#"
         onclick="predict('hummus de chocolate', 0.24, 'kg', 0, 0, 'tarrina'); return false;">chocolate</a> |
       <a href="#"
         onclick="predict('hummus de chocolate hacendado', 0.24, 'kg', 0, 0, 'tarrina'); return false;">chocolate
@@ -37,45 +37,44 @@
 
     <form onsubmit="predictFromForm(); return false;">
       <div class="form-group">
-        <label for="txtProductName">Nombre del producto (puede ser inventado)</label>
+        <label for="txtProductName">Product name (can be invented)</label>
         <input type="text" class="form-control" id="txtProductName" name="txtProductName" required>
         <!--<small id="productNameHelp" class="form-text text-muted">Ejemplos: hummus de chocolate, hummus de chololate
           hacendado, hummus de chocolate nestlé</small> -->
       </div>
       <div class="form-group">
-        <label for="txtSize">Tamaño</label>
+        <label for="txtSize">Size</label>
         <input type="number" class="form-control" id="txtSize" required step="0.01" min="0" max="800">
-        <small id="sizeHelp" class="form-text text-muted">Ejemplos: 0.24, 0.4, 1...</small>
+        <small id="sizeHelp" class="form-text text-muted">Samples: 0.24, 0.4, 1...</small>
       </div>
       <div class="form-group">
-        <label for="opSizeFormat">Unidad de medida</label>
+        <label for="opSizeFormat">Unit of measurement</label>
         <select id="opSizeFormat" class="form-control" required>
-          <option selected disabled value="">Elige...</option>
+          <option selected disabled value="">Choose...</option>
         </select>
-        <small id="sizeFormatHelp" class="form-text text-muted">Ejemplo: 'kg' (para el hummus)</small>
+        <small id="sizeFormatHelp" class="form-text text-muted">Sample: 'kg' (for hummus)</small>
       </div>
       <div class="form-group">
-        <label for="opPackaging">Tipo de envase</label>
+        <label for="opPackaging">Container type</label>
         <select id="opPackaging" class="form-control" required>
-          <option selected disabled value="">Elige...</option>
+          <option selected disabled value="">Choose...</option>
         </select>
-        <small id="packagingHelp" class="form-text text-muted">Ejemplo: 'tarrina' (para el hummus)</small>
+        <small id="packagingHelp" class="form-text text-muted">Sample: 'tarrina' (for hummus)</small>
       </div>
       <div class="form-group form-check-inline">
         <input type="checkbox" class="form-check-input" id="cbIsWater">
-        <label class="form-check-label" for="cbIsWater">¿Es agua?</label>
+        <label class="form-check-label" for="cbIsWater">¿Is water?</label>
       </div>
       <div class="form-group form-check-inline">
         <input type="checkbox" class="form-check-input" id="cbRequiresAgeCheck">
-        <label class="form-check-label" for="cbRequiresAgeCheck">¿Es solo para +18 años?</label>
+        <label class="form-check-label" for="cbRequiresAgeCheck">Is it only for +18 years?</label>
       </div>
-      <button type="submit" class="btn btn-success btn-block">Predecir precio</button>
-      <p><small id="disclaimer" class="form-text text-muted">Disclaimer: Esto es una prueba de
-          concepto usando TensorFlow y TensorFlow.js para predecir precios de productos de
-          supermercado a partir de algunas de sus características. Más información sobre el
-          proceso y trabajo futuro <a
+      <button type="submit" class="btn btn-success btn-block">Predict price</button>
+      <p><small id="disclaimer" class="form-text text-muted">Disclaimer: This is proof of concept 
+          using TensorFlow and TensorFlow.js to predict product prices from supermarket from some 
+          product features. More information about the process and future work <a
             href="https://javiercampos.es/blog/2020/04/22/deep-learning-para-predecir-el-precio-del-hummus-de-chocolate/"
-            target="_blank">aquí</a>.</small>
+            target="_blank">here</a>.</small>
       </p>
     </form>
   </div>
